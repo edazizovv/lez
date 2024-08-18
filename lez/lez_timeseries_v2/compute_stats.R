@@ -1,0 +1,80 @@
+
+library("data.table")
+library("ppcor")
+library("tidyverse")
+library("copula")
+library("HiClimR")
+library("infotheo")
+
+start_time <- Sys.time()
+
+setwd('C:/Users/Edward/Desktop/lez_timeseries_v2/precomputed/linkage_1/')
+getwd()
+
+# listed <- list.files('./pre/')
+listed <- c('TS7_big_nlags.csv', 'TS8_big_nlags.csv')
+
+fun_is <- function(x) {
+  value <- 1 / sqrt(x)
+  return(value)
+}
+
+for (f in listed) {
+  
+  print(str_c("./pre/", f))
+  input <- { str_c("./pre/", f) }
+  data <- fread(input)
+  data_disc <- discretize(data, "equalfreq")
+  
+  print(object.size(data), units='Mb')
+  
+  ff <- substr(f, 1, 3)
+  n_lags <- substr(f, 4, nchar(f)-4)
+  
+  print('ops3')
+  ghoul <- corKendall(data)
+  
+  write.csv(ghoul, str_c("./", ff, "/", "corr_kendall_direct", n_lags, ".csv"))
+  
+  ghoul <- fastCor(data)
+  
+  write.csv(ghoul, str_c("./", ff, "/", "corr_pearson_direct", n_lags, ".csv"))
+  
+  print('ops1')
+  ghoul <- pcor(data, method="pearson")
+  dagger <- ghoul$estimate
+  
+  dagger = data.frame(dagger, row.names=colnames(data))
+  colnames(dagger) <- colnames(data)
+  
+  write.csv(dagger, str_c("./", ff, "/", "corr_pearson_partial", n_lags, ".csv"))
+
+  print('ops2')
+
+  # THIS ONE IS TOO SLOW
+  # that would be nice if we had fast partial kendall; try to find one later
+  
+  # dagger <- performPKe(data)
+
+  # write.csv(dagger, str_c("./", substr(f, 1, nchar(f)-4), "/", "corr_kendall_partial", n_lags, ".csv"))
+  
+  # entropy and conditional_entropy
+  # see tmp_test.R
+  # conditional one excluded due to 0/inf results / negative cmi
+  
+  de_result <- apply(data_disc, 2, entropy)
+  
+  de_vec <- matrix(de_result, nrow=length(de_result), ncol=1)
+  de_row <- matrix(de_result, nrow=1, ncol=length(de_result))
+  de_multiplied <- de_vec %*% de_row
+  de_multiplied <- apply(de_multiplied, c(1, 2), fun_is)
+  
+  dm_result <- mutinformation(data_disc)
+  dn_result <- dm_result * de_multiplied
+  
+  write.csv(dn_result, str_c("./", ff, "/", "corr_mutual_info_direct", n_lags, ".csv"))
+
+}
+
+end_time = Sys.time()
+print(end_time - start_time)

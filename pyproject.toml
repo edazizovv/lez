@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "lez"
+version = "0.0.1"
+description = "A set of tools to examine models on a range of datasets with different properties"
+authors = [
+  "edazizovv",
+]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "lez"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
